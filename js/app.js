@@ -181,15 +181,30 @@ function statusOf(item) {
   return 'Permintaan';
 }
 
-/** Ambil tahun & bulan dari tglTerima (YYYY-MM-DD) */
+/** Ambil tahun & bulan dari berbagai format tanggal */
 function dateParts(d) {
-  const s = String(d || '');
-  const m = s.match(/^(\d{4})-(\d{2})/);
-  if (!m) return { year: null, month: null };
-  return { year: parseInt(m[1], 10), month: parseInt(m[2], 10) };
+  if (d == null || d === '') return { year: null, month: null };
+  // Date object
+  if (d instanceof Date && !isNaN(d.getTime())) {
+    return { year: d.getFullYear(), month: d.getMonth() + 1 };
+  }
+  const s = String(d).trim();
+  // YYYY-MM-DD or YYYY-MM-DDTHH:mm...
+  let m = s.match(/^(\d{4})-(\d{1,2})/);
+  if (m) return { year: parseInt(m[1], 10), month: parseInt(m[2], 10) };
+  // DD/MM/YYYY or DD-MM-YYYY
+  m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+  if (m) return { year: parseInt(m[3], 10), month: parseInt(m[2], 10) };
+  // MM/DD/YYYY (US) — only if first > 12 treat as day? skip ambiguous
+  // Excel serial / other: try Date parse
+  const dt = new Date(s);
+  if (!isNaN(dt.getTime()) && s.length >= 6) {
+    return { year: dt.getFullYear(), month: dt.getMonth() + 1 };
+  }
+  return { year: null, month: null };
 }
 
-/** Isi dropdown tahun dari data + tahun berjalan */
+/** Isi dropdown tahun dari data + tahun berjalan. Pertahankan pilihan user (termasuk Semua Tahun). */
 function fillYearSelect(selectId, preferred) {
   const el = document.getElementById(selectId);
   if (!el) return;
@@ -199,15 +214,21 @@ function fillYearSelect(selectId, preferred) {
   years.add(cy - 1);
   years.add(cy + 1);
   allData.forEach(d => {
-    const p = dateParts(d.tglTerima);
+    const p = dateParts(d.tglTerima || d.tglReg);
     if (p.year) years.add(p.year);
   });
   const sorted = [...years].sort((a, b) => b - a);
-  const cur = preferred != null ? String(preferred) : (el.value || String(cy));
+  // Jangan paksa tahun berjalan jika user memilih "Semua Tahun" (value "")
+  // preferred: explicit; else keep current value (boleh "")
+  const hasPref = preferred !== undefined && preferred !== null;
+  const cur = hasPref ? String(preferred) : String(el.value ?? '');
   el.innerHTML = '<option value="">Semua Tahun</option>' +
-    sorted.map(y => `<option value="${y}" ${String(y) === cur ? 'selected' : ''}>${y}</option>`).join('');
-  if (![...el.options].some(o => o.value === cur) && cur) {
-    el.value = '';
+    sorted.map(y => `<option value="${y}">${y}</option>`).join('');
+  // Restore selection
+  if (cur && [...el.options].some(o => o.value === cur)) {
+    el.value = cur;
+  } else {
+    el.value = ''; // default: Semua Tahun agar data selalu terlihat
   }
 }
 
@@ -216,9 +237,13 @@ function filterByYearMonth(list, yearVal, monthVal) {
   const m = monthVal ? parseInt(monthVal, 10) : null;
   if (!y && !m) return list;
   return list.filter(d => {
-    const p = dateParts(d.tglTerima);
-    if (y && p.year !== y) return false;
-    if (m && p.month !== m) return false;
+    const p = dateParts(d.tglTerima || d.tglReg);
+    // Jika tanggal tidak terbaca tapi user memfilter, tetap tampilkan agar data tidak "hilang"
+    if (p.year == null && p.month == null) return true;
+    if (y && p.year != null && p.year !== y) return false;
+    if (m && p.month != null && p.month !== m) return false;
+    if (y && p.year == null) return true;
+    if (m && p.month == null) return true;
     return true;
   });
 }
@@ -356,13 +381,26 @@ async function syncFromSheets(showToast = true) {
   setSheetStatus(false, 'Menyinkronkan…');
   try {
     const data = await callGAS('getAll');
-    if (Array.isArray(data.klien)) allData = data.klien;
+    if (Array.isArray(data.klien)) {
+      // Jangan timpa data lokal dengan array kosong jika lokal masih berisi
+      if (data.klien.length === 0 && allData.length > 0) {
+        console.warn('[MPL-PK] Sheet Klien kosong; data lokal dipertahankan:', allData.length);
+        if (showToast) toast('Sheet kosong — data lokal tetap dipakai', 'info');
+      } else {
+        allData = data.klien;
+      }
+    }
     if (Array.isArray(data.pk) && data.pk.length) allPk = data.pk;
     if (Array.isArray(data.upt) && data.upt.length) allUpt = data.upt;
     if (Array.isArray(data.users) && data.users.length) allUsers = data.users;
     saveLocal();
     setSheetStatus(true, 'Terhubung • ' + new Date().toLocaleTimeString('id-ID'));
-    if (showToast) toast('Sinkron berhasil', 'success');
+    if (showToast) toast('Sinkron berhasil (' + allData.length + ' klien)', 'success');
+    // Reset filter tahun agar data terlihat setelah sync
+    const yEl = document.getElementById('perm-year');
+    if (yEl) yEl.value = '';
+    const mEl = document.getElementById('perm-month');
+    if (mEl) mEl.value = '';
     renderAll();
   } catch (e) {
     setSheetStatus(false, 'Gagal sinkron');
@@ -434,14 +472,18 @@ function bebanPk() {
 
 // ---------- Permintaan Litmas ----------
 function renderPermintaan() {
-  fillYearSelect('perm-year');
+  fillYearSelect('perm-year'); // pertahankan pilihan user; default Semua Tahun
   const q = (document.getElementById('perm-search')?.value || '').toLowerCase();
   const yearVal = document.getElementById('perm-year')?.value || '';
   const monthVal = document.getElementById('perm-month')?.value || '';
   let list = filterByYearMonth(allData, yearVal, monthVal);
   list = list.filter(d => !q || (d.nama||'').toLowerCase().includes(q) || (d.noSurat||'').toLowerCase().includes(q) || (d.noRegister||'').toLowerCase().includes(q));
-  list = list.slice().sort((a,b) => (b.tglTerima||'').localeCompare(a.tglTerima||''));
+  list = list.slice().sort((a,b) => String(b.tglTerima||'').localeCompare(String(a.tglTerima||'')));
   const total = list.length;
+  // Debug helper di pagination jika filter menyembunyikan data
+  if (!list.length && allData.length) {
+    console.info('[MPL-PK] Filter aktif menyembunyikan data. Total lokal:', allData.length, 'tahun:', yearVal, 'bulan:', monthVal);
+  }
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   if (pageState.perm > pages) pageState.perm = 1;
   const start = (pageState.perm - 1) * PAGE_SIZE;
@@ -464,7 +506,11 @@ function renderPermintaan() {
           <button class="btn btn-ghost btn-sm text-red-600" title="Hapus" onclick="deletePermintaan('${d.id}')"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : '-'}
         </td>
       </tr>`).join('')
-    : '<tr><td colspan="11" class="text-center text-slate-400 py-8">Belum ada permintaan</td></tr>';
+    : `<tr><td colspan="11" class="text-center text-slate-400 py-8">${
+        allData.length
+          ? `Tidak ada data untuk filter ini (${allData.length} total tersimpan). Coba pilih <b>Semua Tahun</b>.`
+          : 'Belum ada permintaan'
+      }</td></tr>`;
 
   const pag = document.getElementById('perm-pagination');
   if (total <= PAGE_SIZE) pag.innerHTML = total ? `<span class="text-xs text-slate-400">${total} data</span>` : '';
@@ -724,7 +770,7 @@ function addBatchRow(n = 1) {
       <div class="flex items-center gap-2">
         <span class="text-[11px] font-bold text-slate-400 w-5 text-center batch-num"></span>
         <input class="form-input flex-1 !py-2" placeholder="Nama lengkap *" data-field="nama">
-        <select class="form-input !py-2" style="width:120px" data-field="jk">
+        <select class="form-input !py-2" style="width:110px" data-field="jk">
           <option value="Laki-laki">Laki-laki</option>
           <option value="Perempuan">Perempuan</option>
         </select>
@@ -732,7 +778,7 @@ function addBatchRow(n = 1) {
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-7">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pl-7">
         <div>
           <select class="form-input !py-2 text-sm" data-field="kategori" onchange="onBatchKategoriChange(this)">
             <option value="">— kategori 1–6 —</option>
@@ -742,6 +788,14 @@ function addBatchRow(n = 1) {
         <div>
           <select class="form-input !py-2 text-sm" data-field="turunan">
             <option value="">— pilih kategori dulu —</option>
+          </select>
+        </div>
+        <div>
+          <select class="form-input !py-2 text-sm" data-field="jenisIntegrasi" title="Jenis Integrasi">
+            <option value="">— Integrasi —</option>
+            <option value="PB">PB (Pembebasan Bersyarat)</option>
+            <option value="CB">CB (Cuti Bersyarat)</option>
+            <option value="CMB">CMB (Cuti Menjelang Bebas)</option>
           </select>
         </div>
       </div>`;
@@ -849,7 +903,8 @@ function collectBatchRows() {
     const jk = r.querySelector('[data-field="jk"]')?.value || 'Laki-laki';
     const kategoriPidana = r.querySelector('[data-field="kategori"]')?.value || '';
     const turunanPidana = r.querySelector('[data-field="turunan"]')?.value || '';
-    if (nama) rows.push({ nama, jk, kategoriPidana, turunanPidana });
+    const jenisIntegrasi = r.querySelector('[data-field="jenisIntegrasi"]')?.value || '';
+    if (nama) rows.push({ nama, jk, kategoriPidana, turunanPidana, jenisIntegrasi });
   });
   return rows;
 }
@@ -966,7 +1021,7 @@ async function savePermintaan(id) {
       kategoriPidana: person.kategoriPidana,
       turunanPidana: person.turunanPidana,
       jenisLitmas,
-      jenisIntegrasi,
+      jenisIntegrasi: person.jenisIntegrasi || jenisIntegrasi || '',
       keterangan,
       noRegister: '',
       tglReg: '',
@@ -978,10 +1033,24 @@ async function savePermintaan(id) {
 
   saveLocal();
   closeModal();
+  // Pastikan filter tidak menyembunyikan data baru: set ke tahun data / Semua Tahun
+  const yEl = document.getElementById('perm-year');
+  const mEl = document.getElementById('perm-month');
+  if (yEl) {
+    const yp = dateParts(tglTerima);
+    if (yp.year) {
+      // pastikan opsi tahun ada lalu pilih
+      fillYearSelect('perm-year', String(yp.year));
+    } else {
+      fillYearSelect('perm-year', '');
+    }
+  }
+  if (mEl) mEl.value = '';
+  pageState.perm = 1;
   renderAll();
   toast(created.length === 1
-    ? `Permintaan tersimpan · lengkapi nomor register di menu Registrasi`
-    : `${created.length} klien tersimpan · nomor register diisi manual di menu Registrasi`, 'success');
+    ? `Permintaan tersimpan · ${created[0].nama}`
+    : `${created.length} klien tersimpan`, 'success');
 
   if (gsheetUrl) {
     for (const item of created) {

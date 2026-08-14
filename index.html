@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="id" class="h-full dark">
+<html lang="id" class="h-full">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#05060a">
+<meta name="theme-color" content="#0a2540">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MPL-PK">
@@ -19,7 +19,7 @@
 <link rel="stylesheet" href="css/styles.css">
 <script>
   tailwind.config = { darkMode: 'class', theme: { extend: {
-    colors: { brand: { primary:'#4f46e5', teal:'#0d9488', coral:'#f43f5e', deep:'#1e1b4b' } },
+    colors: { brand: { primary:'#1a73e8', teal:'#0d9488', coral:'#dc2626', deep:'#0a2540' } },
     fontFamily: { sans: ['"Plus Jakarta Sans"','sans-serif'] },
     boxShadow: { glass: '0 8px 32px rgba(0,0,0,.12)', 'glass-lg': '0 12px 48px rgba(0,0,0,.18)' }
   } } }
@@ -31,9 +31,9 @@
 <!-- ==================== LOGIN ==================== -->
 <div id="login-overlay">
   <div class="login-card" id="login-card">
-    <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center text-[#05060a] font-extrabold text-3xl shadow-xl shadow-cyan-500/40 mb-4" style="box-shadow:0 0 30px rgba(0,229,255,0.4)">M</div>
+    <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-extrabold text-3xl shadow-xl shadow-cyan-500/40 mb-4" style="box-shadow:0 8px 24px rgba(26,115,232,0.35)">M</div>
     <h1 class="text-xl font-extrabold tracking-tight mb-1">MPL-PK</h1>
-    <p class="text-[11px] font-semibold tracking-widest uppercase text-cyan-400 mb-1">Manajemen Pembimbingan Litmas PK</p>
+    <p class="text-[11px] font-semibold tracking-widest uppercase text-blue-600 mb-1">Manajemen Pembimbingan Litmas PK</p>
     <p class="text-xs text-slate-500 mb-6">Masuk dengan akun Anda</p>
 
     <form id="login-form" class="space-y-3 text-left" onsubmit="event.preventDefault(); doLogin();">
@@ -59,10 +59,10 @@
 <aside class="sidebar fixed left-0 top-0 bottom-0 flex flex-col z-50 transition-transform duration-300 -translate-x-full md:translate-x-0" id="sidebar" style="width:var(--sidebar-w)">
   <div class="p-5 border-b border-white/5 flex items-center justify-between relative z-10">
     <div class="flex items-center gap-3">
-      <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-400 to-fuchsia-500 flex items-center justify-center text-[#05060a] font-extrabold text-xl shadow-lg" style="box-shadow:0 0 20px rgba(0,229,255,0.35)">M</div>
+      <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-extrabold text-xl shadow-lg" style="box-shadow:0 0 20px rgba(0,229,255,0.35)">M</div>
       <div>
         <h1 class="text-base font-extrabold text-white tracking-tight">MPL-PK</h1>
-        <p class="text-[10px] text-cyan-400/80 font-semibold tracking-wider uppercase">Litmas PK</p>
+        <p class="text-[10px] text-blue-600/80 font-semibold tracking-wider uppercase">Litmas PK</p>
       </div>
     </div>
     <button onclick="closeSidebar()" class="md:hidden text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-white/5"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -78,6 +78,8 @@
 
     <div class="nav-section-label">Laporan</div>
     <div class="sidebar-link" data-page="statistik" onclick="navigateTo('statistik')"><i data-lucide="bar-chart-3" class="w-4 h-4"></i><span>Statistik Semua Aspek</span></div>
+    <div class="sidebar-link" data-page="rekap-pk-bulan" onclick="navigateTo('rekap-pk-bulan')"><i data-lucide="calendar-range" class="w-4 h-4"></i><span>Rekap PK per Bulan</span></div>
+    <div class="sidebar-link" data-page="rekap-total" onclick="navigateTo('rekap-total')"><i data-lucide="clipboard-list" class="w-4 h-4"></i><span>Total Rekapitulasi</span></div>
 
     <div class="nav-section-label admin-only">Master &amp; Sistem</div>
     <div class="sidebar-link admin-only" data-page="pk" onclick="navigateTo('pk')"><i data-lucide="users" class="w-4 h-4"></i><span>Master PK &amp; APK</span></div>
@@ -90,12 +92,12 @@
   <div class="p-3 border-t border-white/5 space-y-2 relative z-10">
     <div id="logged-badge" class="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2.5 text-slate-300 border border-white/5">
       <span class="flex items-center gap-1.5 min-w-0">
-        <i data-lucide="user-circle" class="w-3.5 h-3.5 text-amber-400 shrink-0"></i>
+        <i data-lucide="user-circle" class="w-3.5 h-3.5 text-blue-300 shrink-0"></i>
         <span class="truncate text-[11px]" id="logged-user-label">-</span>
       </span>
       <button onclick="logoutUser()" class="text-red-400/90 hover:text-red-300 flex items-center gap-1 text-[11px] font-semibold shrink-0"><i data-lucide="log-out" class="w-3.5 h-3.5"></i></button>
     </div>
-    <button onclick="syncFromSheets(true)" class="w-full bg-gradient-to-r from-amber-600/20 to-amber-500/10 hover:from-amber-600/30 hover:to-amber-500/20 text-xs text-amber-300 py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 border border-cyan-500/30 font-semibold transition">
+    <button onclick="syncFromSheets(true)" class="w-full bg-gradient-to-r from-blue-600/30 to-blue-500/20 hover:from-blue-600/40 hover:to-blue-500/30 text-xs text-amber-200 py-2.5 px-3 rounded-xl flex items-center justify-center gap-2 border border-white/10 font-semibold transition">
       <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i><span>Sinkron Google Sheet</span>
     </button>
     <div class="bg-white/5 rounded-xl p-2.5 flex items-center gap-2.5 text-xs text-slate-400 border border-white/5">
@@ -138,22 +140,22 @@
       <p class="text-[11px] text-slate-400" id="dash-updated">—</p>
     </div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <div class="stat-card text-white" style="background:linear-gradient(145deg,#0e7490,#00e5ff)">
+      <div class="stat-card">
         <div class="stat-icon"><i data-lucide="file-input" class="w-5 h-5"></i></div>
         <p class="text-[11px] font-semibold text-indigo-100 uppercase tracking-wider">Permintaan</p>
         <p class="text-3xl font-extrabold mt-1" id="k-permintaan">0</p>
       </div>
-      <div class="stat-card text-white" style="background:linear-gradient(145deg,#6b21a8,#c026d3)">
+      <div class="stat-card">
         <div class="stat-icon"><i data-lucide="hash" class="w-5 h-5"></i></div>
         <p class="text-[11px] font-semibold text-teal-100 uppercase tracking-wider">Terregistrasi</p>
         <p class="text-3xl font-extrabold mt-1" id="k-reg">0</p>
       </div>
-      <div class="stat-card text-white" style="background:linear-gradient(145deg,#1e3a5f,#8b5cff)">
+      <div class="stat-card">
         <div class="stat-icon"><i data-lucide="user-check" class="w-5 h-5"></i></div>
         <p class="text-[11px] font-semibold text-violet-100 uppercase tracking-wider">Sudah Ditunjuk PK</p>
         <p class="text-3xl font-extrabold mt-1" id="k-pk">0</p>
       </div>
-      <div class="stat-card text-white" style="background:linear-gradient(145deg,#9f1239,#ff4d6d)">
+      <div class="stat-card">
         <div class="stat-icon"><i data-lucide="clock" class="w-5 h-5"></i></div>
         <p class="text-[11px] font-semibold text-rose-100 uppercase tracking-wider">Belum Ditunjuk</p>
         <p class="text-3xl font-extrabold mt-1" id="k-belum">0</p>
@@ -161,11 +163,11 @@
     </div>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
       <div class="card-panel p-5">
-        <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="pie-chart" class="w-4 h-4 text-cyan-400"></i> Status Alur</h4>
+        <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="pie-chart" class="w-4 h-4 text-blue-600"></i> Status Alur</h4>
         <canvas id="chart-status" height="220"></canvas>
       </div>
       <div class="card-panel p-5">
-        <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="bar-chart-2" class="w-4 h-4 text-cyan-400"></i> Beban per PK</h4>
+        <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="bar-chart-2" class="w-4 h-4 text-blue-600"></i> Beban per PK</h4>
         <canvas id="chart-beban" height="220"></canvas>
       </div>
     </div>
@@ -187,8 +189,24 @@
         <p class="text-xs font-semibold tracking-widest uppercase text-slate-400 mb-1">Operasional</p>
         <h3 class="text-lg font-extrabold tracking-tight">Permintaan Litmas</h3>
       </div>
-      <div class="flex flex-wrap gap-2">
-        <input type="search" class="form-input" style="width:200px" id="perm-search" placeholder="Cari nama / no surat…" oninput="renderPermintaan()">
+      <div class="flex flex-wrap gap-2 items-center">
+        <select class="form-input" style="width:110px" id="perm-year" onchange="renderPermintaan()"></select>
+        <select class="form-input" style="width:140px" id="perm-month" onchange="renderPermintaan()">
+          <option value="">Semua Bulan</option>
+          <option value="1">Januari</option>
+          <option value="2">Februari</option>
+          <option value="3">Maret</option>
+          <option value="4">April</option>
+          <option value="5">Mei</option>
+          <option value="6">Juni</option>
+          <option value="7">Juli</option>
+          <option value="8">Agustus</option>
+          <option value="9">September</option>
+          <option value="10">Oktober</option>
+          <option value="11">November</option>
+          <option value="12">Desember</option>
+        </select>
+        <input type="search" class="form-input" style="width:180px" id="perm-search" placeholder="Cari nama / no surat…" oninput="renderPermintaan()">
         <button class="btn btn-primary" onclick="openPermintaanModal()" id="btn-add-perm"><i data-lucide="plus" class="w-4 h-4"></i> Tambah Permintaan</button>
       </div>
     </div>
@@ -286,11 +304,11 @@
     <div class="stat-section-title"><i data-lucide="activity" class="w-3.5 h-3.5"></i> Alur & Profil Klien</div>
     <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
       <div class="card-panel p-5">
-        <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="pie-chart" class="w-4 h-4 text-cyan-400"></i> Status Alur</h4>
+        <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="pie-chart" class="w-4 h-4 text-blue-600"></i> Status Alur</h4>
         <canvas id="chart-stat-alur" height="220"></canvas>
       </div>
       <div class="card-panel p-5">
-        <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="users" class="w-4 h-4 text-cyan-400"></i> Jenis Kelamin</h4>
+        <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="users" class="w-4 h-4 text-blue-600"></i> Jenis Kelamin</h4>
         <canvas id="chart-stat-jk" height="220"></canvas>
       </div>
       <div class="card-panel p-5">
@@ -303,7 +321,7 @@
     <div class="stat-section-title"><i data-lucide="scale" class="w-3.5 h-3.5"></i> Pidana</div>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
       <div class="card-panel p-5">
-        <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="bar-chart-3" class="w-4 h-4 text-cyan-400"></i> Kategori Pidana (1–6)</h4>
+        <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="bar-chart-3" class="w-4 h-4 text-blue-600"></i> Kategori Pidana (1–6)</h4>
         <canvas id="chart-stat-kategori" height="260"></canvas>
       </div>
       <div class="card-panel p-5">
@@ -314,7 +332,7 @@
 
     <!-- Top Tindak Pidana -->
     <div class="card-panel p-5 mb-8">
-      <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="list-ordered" class="w-4 h-4 text-cyan-400"></i> Top Jenis Tindak Pidana</h4>
+      <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="list-ordered" class="w-4 h-4 text-blue-600"></i> Top Jenis Tindak Pidana</h4>
       <div id="stat-turunan-bars" class="space-y-1"></div>
     </div>
 
@@ -322,11 +340,11 @@
     <div class="stat-section-title"><i data-lucide="building-2" class="w-3.5 h-3.5"></i> Asal & Beban</div>
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
       <div class="card-panel p-5">
-        <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-cyan-400"></i> Distribusi per UPT</h4>
+        <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4 text-blue-600"></i> Distribusi per UPT</h4>
         <canvas id="chart-stat-upt" height="280"></canvas>
       </div>
       <div class="card-panel p-5">
-        <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="user-check" class="w-4 h-4 text-cyan-400"></i> Beban per PK</h4>
+        <h4 class="font-bold text-sm mb-4 flex items-center gap-2"><i data-lucide="user-check" class="w-4 h-4 text-blue-600"></i> Beban per PK</h4>
         <canvas id="chart-stat-pk" height="280"></canvas>
       </div>
     </div>
@@ -350,6 +368,115 @@
             <tbody id="stat-rekap-tbody"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- REKAPITULASI PK PER BULAN -->
+  <section class="page" id="page-rekap-pk-bulan">
+    <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <p class="text-xs font-semibold tracking-widest uppercase text-slate-400 mb-1">Laporan</p>
+        <h3 class="text-lg font-extrabold tracking-tight">Rekapitulasi PK per Bulan</h3>
+        <p class="text-xs text-slate-500 mt-1">Jumlah klien yang ditunjuk ke masing-masing PK berdasarkan bulan penerimaan</p>
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        <select class="form-input" style="width:120px" id="rekap-pk-year" onchange="renderRekapPkBulan()"></select>
+        <button class="btn btn-ghost btn-sm" onclick="exportRekapPkBulan()"><i data-lucide="download" class="w-3.5 h-3.5"></i> Export CSV</button>
+      </div>
+    </div>
+    <div class="card-panel p-0 overflow-hidden">
+      <div class="table-wrap">
+        <table id="table-rekap-pk-bulan">
+          <thead id="rekap-pk-thead"></thead>
+          <tbody id="rekap-pk-tbody"></tbody>
+          <tfoot id="rekap-pk-tfoot"></tfoot>
+        </table>
+      </div>
+    </div>
+    <p class="text-xs text-slate-400 mt-3" id="rekap-pk-note"></p>
+  </section>
+
+  <!-- TOTAL REKAPITULASI -->
+  <section class="page" id="page-rekap-total">
+    <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <p class="text-xs font-semibold tracking-widest uppercase text-slate-400 mb-1">Laporan</p>
+        <h3 class="text-lg font-extrabold tracking-tight">Total Rekapitulasi</h3>
+        <p class="text-xs text-slate-500 mt-1">Ringkasan keseluruhan data litmas berdasarkan filter tahun &amp; bulan</p>
+      </div>
+      <div class="flex flex-wrap gap-2 items-center">
+        <select class="form-input" style="width:110px" id="rekap-total-year" onchange="renderRekapTotal()"></select>
+        <select class="form-input" style="width:140px" id="rekap-total-month" onchange="renderRekapTotal()">
+          <option value="">Semua Bulan</option>
+          <option value="1">Januari</option>
+          <option value="2">Februari</option>
+          <option value="3">Maret</option>
+          <option value="4">April</option>
+          <option value="5">Mei</option>
+          <option value="6">Juni</option>
+          <option value="7">Juli</option>
+          <option value="8">Agustus</option>
+          <option value="9">September</option>
+          <option value="10">Oktober</option>
+          <option value="11">November</option>
+          <option value="12">Desember</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6" id="rekap-total-kpi"></div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+      <div class="card-panel p-0 overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-200/50 dark:border-white/5 font-bold text-sm">Rekap per Bulan</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Bulan</th><th>Permintaan</th><th>Terregistrasi</th><th>Ditunjuk PK</th><th>Total</th></tr></thead>
+            <tbody id="rekap-total-bulan-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-panel p-0 overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-200/50 dark:border-white/5 font-bold text-sm">Rekap per Jenis Litmas</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Jenis Litmas</th><th>Jumlah</th><th>%</th></tr></thead>
+            <tbody id="rekap-total-jenis-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+      <div class="card-panel p-0 overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-200/50 dark:border-white/5 font-bold text-sm">Rekap per UPT</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>UPT</th><th>Jumlah</th><th>%</th></tr></thead>
+            <tbody id="rekap-total-upt-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card-panel p-0 overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-200/50 dark:border-white/5 font-bold text-sm">Rekap Jenis Integrasi</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Jenis Integrasi</th><th>Jumlah</th><th>%</th></tr></thead>
+            <tbody id="rekap-total-integrasi-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-panel p-0 overflow-hidden mb-6">
+      <div class="px-5 py-3.5 border-b border-slate-200/50 dark:border-white/5 font-bold text-sm">Rekap per PK (dalam periode)</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>PK</th><th>Jumlah Klien</th><th>%</th></tr></thead>
+          <tbody id="rekap-total-pk-tbody"></tbody>
+        </table>
       </div>
     </div>
   </section>

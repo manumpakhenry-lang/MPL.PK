@@ -31,6 +31,9 @@ let allUsers = JSON.parse(localStorage.getItem(STORAGE.users) || '[]');
 let pageState = { perm: 1 };
 let charts = {};
 
+const BULAN_NAMA = ['', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+const BULAN_SINGKAT = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
 const DEFAULT_PK = [
   { id: 'pk1', nama: 'Ahmad Fauzi', nip: '', jabatan: 'PK Ahli Muda', status: 'Aktif' },
   { id: 'pk2', nama: 'Siti Rahayu', nip: '', jabatan: 'PK Ahli Pertama', status: 'Aktif' },
@@ -114,11 +117,17 @@ function saveLocal() {
 function toast(msg, type = 'info') {
   const c = document.getElementById('toast-container');
   const el = document.createElement('div');
-  el.className = 'toast';
-  el.style.background = type === 'error' ? '#ff4d6d' : type === 'success' ? '#b8ff3c' : '#00e5ff';
+  el.className = 'toast ' + (type === 'error' ? 'toast-error' : type === 'success' ? 'toast-success' : 'toast-info');
   el.textContent = msg;
   c.appendChild(el);
   setTimeout(() => el.remove(), 3200);
+}
+
+/** Buka form edit permintaan — tombol pensil memanggil fungsi ini */
+function editPermintaan(id) {
+  const item = allData.find(d => d.id === id);
+  if (!item) return toast('Data tidak ditemukan', 'error');
+  openPermintaanModal(item);
 }
 
 function esc(s) {
@@ -137,7 +146,7 @@ function nextNoRegister(tgl) {
   let max = 0;
   allData.forEach(item => {
     const nr = String(item.noRegister || '');
-    const m = nr.match(/^(\d+)\/DW\//i);
+    const m = nr.match(/^(\d+)\/MPL\//i) || nr.match(/^(\d+)\//);
     if (m) {
       const n = parseInt(m[1], 10);
       if (!isNaN(n) && n > max) max = n;
@@ -170,6 +179,48 @@ function statusOf(item) {
   if (item.pk) return 'Ditunjuk PK';
   if (item.noRegister) return 'Terregistrasi';
   return 'Permintaan';
+}
+
+/** Ambil tahun & bulan dari tglTerima (YYYY-MM-DD) */
+function dateParts(d) {
+  const s = String(d || '');
+  const m = s.match(/^(\d{4})-(\d{2})/);
+  if (!m) return { year: null, month: null };
+  return { year: parseInt(m[1], 10), month: parseInt(m[2], 10) };
+}
+
+/** Isi dropdown tahun dari data + tahun berjalan */
+function fillYearSelect(selectId, preferred) {
+  const el = document.getElementById(selectId);
+  if (!el) return;
+  const years = new Set();
+  const cy = new Date().getFullYear();
+  years.add(cy);
+  years.add(cy - 1);
+  years.add(cy + 1);
+  allData.forEach(d => {
+    const p = dateParts(d.tglTerima);
+    if (p.year) years.add(p.year);
+  });
+  const sorted = [...years].sort((a, b) => b - a);
+  const cur = preferred != null ? String(preferred) : (el.value || String(cy));
+  el.innerHTML = '<option value="">Semua Tahun</option>' +
+    sorted.map(y => `<option value="${y}" ${String(y) === cur ? 'selected' : ''}>${y}</option>`).join('');
+  if (![...el.options].some(o => o.value === cur) && cur) {
+    el.value = '';
+  }
+}
+
+function filterByYearMonth(list, yearVal, monthVal) {
+  const y = yearVal ? parseInt(yearVal, 10) : null;
+  const m = monthVal ? parseInt(monthVal, 10) : null;
+  if (!y && !m) return list;
+  return list.filter(d => {
+    const p = dateParts(d.tglTerima);
+    if (y && p.year !== y) return false;
+    if (m && p.month !== m) return false;
+    return true;
+  });
 }
 
 // ---------- Auth (multi-user) ----------
@@ -258,6 +309,8 @@ function navigateTo(page) {
     registrasi: 'Registrasi',
     pembagian: 'Pembagian Litmas (Penunjukan PK)',
     statistik: 'Statistik Semua Aspek',
+    'rekap-pk-bulan': 'Rekapitulasi PK per Bulan',
+    'rekap-total': 'Total Rekapitulasi',
     pk: 'Master PK & APK',
     upt: 'Master UPT',
     users: 'Pengguna'
@@ -381,8 +434,12 @@ function bebanPk() {
 
 // ---------- Permintaan Litmas ----------
 function renderPermintaan() {
+  fillYearSelect('perm-year');
   const q = (document.getElementById('perm-search')?.value || '').toLowerCase();
-  let list = allData.filter(d => !q || (d.nama||'').toLowerCase().includes(q) || (d.noSurat||'').toLowerCase().includes(q));
+  const yearVal = document.getElementById('perm-year')?.value || '';
+  const monthVal = document.getElementById('perm-month')?.value || '';
+  let list = filterByYearMonth(allData, yearVal, monthVal);
+  list = list.filter(d => !q || (d.nama||'').toLowerCase().includes(q) || (d.noSurat||'').toLowerCase().includes(q) || (d.noRegister||'').toLowerCase().includes(q));
   list = list.slice().sort((a,b) => (b.tglTerima||'').localeCompare(a.tglTerima||''));
   const total = list.length;
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -393,18 +450,18 @@ function renderPermintaan() {
   document.getElementById('perm-tbody').innerHTML = slice.length
     ? slice.map((d, i) => `<tr>
         <td>${start + i + 1}</td>
-        <td class="font-mono text-xs font-semibold text-indigo-600 dark:text-indigo-400">${esc(d.noRegister||'-')}</td>
+        <td class="font-mono text-xs font-semibold text-blue-700">${esc(d.noRegister||'-')}</td>
         <td class="font-semibold">${esc(d.nama)}</td>
         <td>${esc(d.jk||'-')}</td>
         <td class="text-xs">${esc(d.noSurat||'-')}</td>
         <td class="text-xs">${esc(d.upt||'-')}</td>
-        <td class="text-xs">${esc(d.jenisLitmas||'-')}</td>
+        <td class="text-xs">${esc(d.jenisLitmas||'-')}${d.jenisIntegrasi ? ' <span class="badge badge-blue">'+esc(d.jenisIntegrasi)+'</span>' : ''}</td>
         <td class="text-xs">${esc(d.turunanPidana||d.kategoriPidana||'-')}</td>
         <td>${badge(d.keterangan||'Normal')}</td>
         <td>${badge(statusOf(d))}</td>
-        <td>
-          ${canEdit() ? `<button class="btn btn-ghost btn-sm" onclick="editPermintaan('${d.id}')"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
-          <button class="btn btn-ghost btn-sm text-red-500" onclick="deletePermintaan('${d.id}')"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : '-'}
+        <td class="whitespace-nowrap">
+          ${canEdit() ? `<button class="btn btn-ghost btn-sm" title="Edit" onclick="editPermintaan('${d.id}')"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+          <button class="btn btn-ghost btn-sm text-red-600" title="Hapus" onclick="deletePermintaan('${d.id}')"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : '-'}
         </td>
       </tr>`).join('')
     : '<tr><td colspan="11" class="text-center text-slate-400 py-8">Belum ada permintaan</td></tr>';
@@ -429,13 +486,13 @@ function openPermintaanModal(item = null) {
   ).join('');
 
   showModal(`
-    <h3 class="text-lg font-extrabold mb-1">${isEdit ? 'Edit' : 'Tambah'} Permintaan Litmas</h3>
-    <p class="text-xs text-slate-500 mb-4">No. register otomatis: <code class="text-indigo-500">0001/MPL/I/2026</code></p>
+    <h3 class="text-lg font-bold mb-1">${isEdit ? 'Edit' : 'Tambah'} Permintaan Litmas</h3>
+    <p class="text-xs text-slate-500 mb-4">Isi data surat &amp; klien. Nomor registrasi diisi manual di menu Registrasi atau saat edit.</p>
 
     <form class="space-y-4" onsubmit="event.preventDefault();savePermintaan('${item?item.id:''}')">
       <!-- Data surat (shared) -->
-      <div class="rounded-2xl border border-slate-200/60 dark:border-white/10 p-4 space-y-3 bg-slate-50/50 dark:bg-white/5">
-        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Data Surat Permintaan</p>
+      <div class="form-section">
+        <p class="form-section-title">Data Surat Permintaan</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="fl">No. Surat Permintaan *</label>
@@ -454,7 +511,7 @@ function openPermintaanModal(item = null) {
           </div>
           <div>
             <label class="fl">Jenis Litmas *</label>
-            <select class="form-input" id="f-jenisLitmas" required>
+            <select class="form-input" id="f-jenisLitmas" required onchange="onJenisLitmasChange()">
               <option value="Perawatan" ${item?.jenisLitmas==='Perawatan'?'selected':''}>Perawatan</option>
               <option value="Integrasi" ${item?.jenisLitmas==='Integrasi'?'selected':''}>Integrasi</option>
               <option value="Pembimbingan" ${item?.jenisLitmas==='Pembimbingan'?'selected':''}>Pembimbingan</option>
@@ -477,8 +534,8 @@ function openPermintaanModal(item = null) {
 
       ${isEdit ? `
       <!-- Pidana (edit / single) -->
-      <div class="rounded-2xl border border-slate-200/60 dark:border-white/10 p-4 space-y-3 bg-slate-50/50 dark:bg-white/5">
-        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Tindak Pidana</p>
+      <div class="form-section">
+        <p class="form-section-title">Tindak Pidana</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="fl">Kategori *</label>
@@ -495,8 +552,8 @@ function openPermintaanModal(item = null) {
           </div>
         </div>
       </div>
-      <div class="rounded-2xl border border-slate-200/60 dark:border-white/10 p-4 space-y-3">
-        <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Data Klien</p>
+      <div class="form-section">
+        <p class="form-section-title">Data Klien</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="fl">Nama *</label>
@@ -508,6 +565,19 @@ function openPermintaanModal(item = null) {
               <option value="Laki-laki" ${item?.jk==='Laki-laki'?'selected':''}>Laki-laki</option>
               <option value="Perempuan" ${item?.jk==='Perempuan'?'selected':''}>Perempuan</option>
             </select>
+          </div>
+          <div id="wrap-jenis-integrasi">
+            <label class="fl">Jenis Integrasi</label>
+            <select class="form-input" id="f-jenisIntegrasi">
+              <option value="">— pilih (opsional) —</option>
+              <option value="PB" ${item?.jenisIntegrasi==='PB'?'selected':''}>PB (Pembebasan Bersyarat)</option>
+              <option value="CB" ${item?.jenisIntegrasi==='CB'?'selected':''}>CB (Cuti Bersyarat)</option>
+              <option value="CMB" ${item?.jenisIntegrasi==='CMB'?'selected':''}>CMB (Cuti Menjelang Bebas)</option>
+            </select>
+          </div>
+          <div>
+            <label class="fl">No. Register <span class="text-slate-400 font-normal">(manual)</span></label>
+            <input class="form-input" id="f-noreg" value="${esc(item?.noRegister||'')}" placeholder="Contoh: 0001/MPL/I/2026">
           </div>
         </div>
       </div>
@@ -524,10 +594,10 @@ function openPermintaanModal(item = null) {
         </button>
       </div>
 
-      <!-- Single mode: nama + JK + pidana -->
+      <!-- Single mode: nama + JK + integrasi + pidana -->
       <div id="panel-single" class="space-y-3">
-        <div class="rounded-2xl border border-slate-200/60 dark:border-white/10 p-4 space-y-3">
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Data Klien</p>
+        <div class="form-section">
+          <p class="form-section-title">Data Klien</p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="fl">Nama Lengkap *</label>
@@ -540,10 +610,19 @@ function openPermintaanModal(item = null) {
                 <option value="Perempuan">Perempuan</option>
               </select>
             </div>
+            <div id="wrap-jenis-integrasi">
+              <label class="fl">Jenis Integrasi</label>
+              <select class="form-input" id="f-jenisIntegrasi">
+                <option value="">— pilih (opsional) —</option>
+                <option value="PB">PB (Pembebasan Bersyarat)</option>
+                <option value="CB">CB (Cuti Bersyarat)</option>
+                <option value="CMB">CMB (Cuti Menjelang Bebas)</option>
+              </select>
+            </div>
           </div>
         </div>
-        <div class="rounded-2xl border border-slate-200/60 dark:border-white/10 p-4 space-y-3 bg-slate-50/50 dark:bg-white/5">
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Tindak Pidana</p>
+        <div class="form-section">
+          <p class="form-section-title">Tindak Pidana</p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label class="fl">Kategori *</label>
@@ -604,6 +683,7 @@ function openPermintaanModal(item = null) {
     addBatchRow(3);
     setInputMode('single');
   }
+  setTimeout(() => onJenisLitmasChange(), 20);
   lucide.createIcons();
 }
 
@@ -774,6 +854,23 @@ function collectBatchRows() {
   return rows;
 }
 
+function onJenisLitmasChange() {
+  // Field Jenis Integrasi selalu tersedia; highlight jika Integrasi
+  const jl = document.getElementById('f-jenisLitmas')?.value;
+  const wrap = document.getElementById('wrap-jenis-integrasi');
+  if (!wrap) return;
+  if (jl === 'Integrasi') {
+    wrap.style.opacity = '1';
+    const lab = wrap.querySelector('.fl');
+    if (lab && !lab.querySelector('.req-star')) {
+      lab.insertAdjacentHTML('beforeend', ' <span class="req-star text-red-500">*</span>');
+    }
+  } else {
+    wrap.style.opacity = '0.95';
+    wrap.querySelector('.req-star')?.remove();
+  }
+}
+
 function onKategoriChange() {
   const kat = document.getElementById('f-kategori')?.value;
   const sel = document.getElementById('f-turunan');
@@ -794,6 +891,7 @@ async function savePermintaan(id) {
   const jenisLitmas = document.getElementById('f-jenisLitmas').value;
   const keterangan = document.getElementById('f-keterangan').value;
   const catatan = document.getElementById('f-catatan').value.trim();
+  const jenisIntegrasi = (document.getElementById('f-jenisIntegrasi')?.value || '').trim();
 
   if (!noSurat || !tglTerima || !upt || !jenisLitmas) {
     return toast('Lengkapi field wajib (surat, UPT, jenis litmas)', 'error');
@@ -809,16 +907,22 @@ async function savePermintaan(id) {
     const nama = document.getElementById('f-nama').value.trim();
     const jk = document.getElementById('f-jk').value;
     if (!nama) return toast('Nama wajib', 'error');
+    const noRegisterManual = (document.getElementById('f-noreg')?.value || '').trim();
     const i = allData.findIndex(d => d.id === id);
     if (i < 0) return;
     allData[i] = {
       ...allData[i],
       nama, jk, noSurat, tglTerima, upt, catatan,
-      kategoriPidana, turunanPidana, jenisLitmas, keterangan
+      kategoriPidana, turunanPidana, jenisLitmas, keterangan,
+      jenisIntegrasi
     };
-    if (!allData[i].noRegister) {
-      allData[i].noRegister = nextNoRegister(tglTerima);
+    // Nomor registrasi diedit manual — kosongkan jika dikosongkan user
+    allData[i].noRegister = noRegisterManual;
+    if (noRegisterManual && !allData[i].tglReg) {
       allData[i].tglReg = tglTerima;
+    }
+    if (!noRegisterManual) {
+      allData[i].tglReg = '';
     }
     saveLocal();
     closeModal();
@@ -828,7 +932,7 @@ async function savePermintaan(id) {
     return;
   }
 
-  // CREATE — single or batch
+  // CREATE — single or batch (tanpa auto nomor register — diisi manual di menu Registrasi)
   let people = [];
   if (window._inputMode === 'batch') {
     people = collectBatchRows();
@@ -851,7 +955,6 @@ async function savePermintaan(id) {
 
   const created = [];
   for (const person of people) {
-    const noRegister = nextNoRegister(tglTerima);
     const obj = {
       id: uid(),
       nama: person.nama,
@@ -863,9 +966,10 @@ async function savePermintaan(id) {
       kategoriPidana: person.kategoriPidana,
       turunanPidana: person.turunanPidana,
       jenisLitmas,
+      jenisIntegrasi,
       keterangan,
-      noRegister,
-      tglReg: tglTerima,
+      noRegister: '',
+      tglReg: '',
       pk: ''
     };
     allData.unshift(obj);
@@ -876,8 +980,8 @@ async function savePermintaan(id) {
   closeModal();
   renderAll();
   toast(created.length === 1
-    ? `Tersimpan · ${created[0].noRegister}`
-    : `${created.length} klien tersimpan · register otomatis`, 'success');
+    ? `Permintaan tersimpan · lengkapi nomor register di menu Registrasi`
+    : `${created.length} klien tersimpan · nomor register diisi manual di menu Registrasi`, 'success');
 
   if (gsheetUrl) {
     for (const item of created) {
@@ -924,11 +1028,20 @@ function renderRegistrasi() {
 function openRegModal(id) {
   const item = allData.find(d => d.id === id);
   if (!item) return;
+  const suggested = item.noRegister || nextNoRegister(item.tglTerima || new Date().toISOString().slice(0,10));
   showModal(`
-    <h3 class="text-lg font-extrabold mb-4">Registrasi — ${esc(item.nama)}</h3>
+    <h3 class="text-lg font-bold mb-1">Registrasi — ${esc(item.nama)}</h3>
+    <p class="text-xs text-slate-500 mb-4">Nomor register diisi <b>manual</b>. Saran otomatis dapat diubah.</p>
     <form class="space-y-3" onsubmit="event.preventDefault();saveRegistrasi('${id}')">
-      <div><label class="fl">No. Register *</label><input class="form-input" id="r-noreg" required value="${esc(item.noRegister||'')}" placeholder="Contoh: REG/001/2026"></div>
-      <div><label class="fl">Tanggal Registrasi</label><input type="date" class="form-input" id="r-tgl" value="${esc(item.tglReg||new Date().toISOString().slice(0,10))}"></div>
+      <div>
+        <label class="fl">No. Register *</label>
+        <input class="form-input" id="r-noreg" required value="${esc(suggested)}" placeholder="0001/MPL/I/2026">
+        <p class="text-[10px] text-slate-400 mt-1">Anda dapat mengubah nomor ini sesuai kebutuhan.</p>
+      </div>
+      <div>
+        <label class="fl">Tanggal Registrasi</label>
+        <input type="date" class="form-input" id="r-tgl" value="${esc(item.tglReg||new Date().toISOString().slice(0,10))}">
+      </div>
       <div class="flex justify-end gap-2 pt-2">
         <button type="button" class="btn btn-ghost" onclick="closeModal()">Batal</button>
         <button type="submit" class="btn btn-primary">Simpan Registrasi</button>
@@ -1501,12 +1614,203 @@ function updateTicker(){
   track.innerHTML = html + html;
 }
 
+// ---------- Rekapitulasi PK per Bulan ----------
+function renderRekapPkBulan() {
+  fillYearSelect('rekap-pk-year');
+  // Untuk rekap PK, default tahun berjalan jika "Semua Tahun"
+  const yearEl = document.getElementById('rekap-pk-year');
+  let yearVal = yearEl?.value || '';
+  if (!yearVal) {
+    yearVal = String(new Date().getFullYear());
+    if (yearEl) yearEl.value = yearVal;
+  }
+  const year = parseInt(yearVal, 10);
+
+  const months = [1,2,3,4,5,6,7,8,9,10,11,12];
+  // PK list: semua PK master + yang muncul di data
+  const pkNames = new Set();
+  allPk.forEach(p => { if (p.nama) pkNames.add(p.nama); });
+  allData.forEach(d => { if (d.pk) pkNames.add(d.pk); });
+  const pks = [...pkNames].sort((a,b) => a.localeCompare(b, 'id'));
+
+  // matrix[pk][month] = count
+  const matrix = {};
+  pks.forEach(n => { matrix[n] = Object.fromEntries(months.map(m => [m, 0])); matrix[n].total = 0; });
+  const colTotal = Object.fromEntries(months.map(m => [m, 0]));
+  let grand = 0;
+
+  allData.forEach(d => {
+    if (!d.pk) return;
+    const p = dateParts(d.tglTerima);
+    if (p.year !== year || !p.month) return;
+    if (!matrix[d.pk]) {
+      matrix[d.pk] = Object.fromEntries(months.map(m => [m, 0]));
+      matrix[d.pk].total = 0;
+      pks.push(d.pk);
+    }
+    matrix[d.pk][p.month]++;
+    matrix[d.pk].total++;
+    colTotal[p.month]++;
+    grand++;
+  });
+
+  const thead = document.getElementById('rekap-pk-thead');
+  const tbody = document.getElementById('rekap-pk-tbody');
+  const tfoot = document.getElementById('rekap-pk-tfoot');
+  if (!thead || !tbody) return;
+
+  thead.innerHTML = `<tr>
+    <th>Nama PK</th>
+    ${months.map(m => `<th class="text-center">${BULAN_SINGKAT[m]}</th>`).join('')}
+    <th class="text-center">Total</th>
+  </tr>`;
+
+  tbody.innerHTML = pks.length
+    ? pks.map(n => {
+        const row = matrix[n] || {};
+        return `<tr>
+          <td class="font-semibold">${esc(n)}</td>
+          ${months.map(m => `<td class="text-center">${row[m] || 0}</td>`).join('')}
+          <td class="text-center font-bold">${row.total || 0}</td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="14" class="text-center text-slate-400 py-8">Belum ada data penunjukan PK</td></tr>`;
+
+  if (tfoot) {
+    tfoot.innerHTML = `<tr class="font-bold bg-slate-50 dark:bg-white/5">
+      <td>TOTAL</td>
+      ${months.map(m => `<td class="text-center">${colTotal[m] || 0}</td>`).join('')}
+      <td class="text-center">${grand}</td>
+    </tr>`;
+  }
+
+  const note = document.getElementById('rekap-pk-note');
+  if (note) note.textContent = `Periode tahun ${year} · Dihitung dari klien yang sudah ditunjuk PK (berdasarkan tanggal penerimaan surat).`;
+}
+
+function exportRekapPkBulan() {
+  const yearEl = document.getElementById('rekap-pk-year');
+  const year = yearEl?.value || new Date().getFullYear();
+  const months = [1,2,3,4,5,6,7,8,9,10,11,12];
+  const pkNames = new Set();
+  allPk.forEach(p => { if (p.nama) pkNames.add(p.nama); });
+  allData.forEach(d => { if (d.pk) pkNames.add(d.pk); });
+  const pks = [...pkNames].sort((a,b) => a.localeCompare(b, 'id'));
+  const matrix = {};
+  pks.forEach(n => { matrix[n] = Object.fromEntries(months.map(m => [m, 0])); matrix[n].total = 0; });
+  allData.forEach(d => {
+    if (!d.pk) return;
+    const p = dateParts(d.tglTerima);
+    if (p.year !== parseInt(year, 10) || !p.month) return;
+    if (!matrix[d.pk]) {
+      matrix[d.pk] = Object.fromEntries(months.map(m => [m, 0]));
+      matrix[d.pk].total = 0;
+      pks.push(d.pk);
+    }
+    matrix[d.pk][p.month]++;
+    matrix[d.pk].total++;
+  });
+  const header = ['Nama PK', ...months.map(m => BULAN_NAMA[m]), 'Total'];
+  const rows = pks.map(n => {
+    const row = matrix[n] || {};
+    return [n, ...months.map(m => row[m] || 0), row.total || 0];
+  });
+  const csv = [header, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `rekap-pk-bulan-${year}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('CSV diunduh', 'success');
+}
+
+// ---------- Total Rekapitulasi ----------
+function renderRekapTotal() {
+  fillYearSelect('rekap-total-year');
+  const yearVal = document.getElementById('rekap-total-year')?.value || '';
+  const monthVal = document.getElementById('rekap-total-month')?.value || '';
+  const list = filterByYearMonth(allData, yearVal, monthVal);
+
+  const nTotal = list.length;
+  const nPerm = list.filter(d => statusOf(d) === 'Permintaan').length;
+  const nReg = list.filter(d => statusOf(d) === 'Terregistrasi').length;
+  const nPk = list.filter(d => statusOf(d) === 'Ditunjuk PK').length;
+
+  const kpi = document.getElementById('rekap-total-kpi');
+  if (kpi) {
+    kpi.innerHTML = [
+      { label: 'Total Data', val: nTotal, color: 'var(--blue)' },
+      { label: 'Permintaan', val: nPerm, color: '#d97706' },
+      { label: 'Terregistrasi', val: nReg, color: '#7c3aed' },
+      { label: 'Ditunjuk PK', val: nPk, color: '#059669' },
+    ].map(k => `
+      <div class="stat-card">
+        <p class="text-[11px] font-semibold uppercase tracking-wider" style="color:var(--muted)">${k.label}</p>
+        <p class="text-3xl font-extrabold mt-1" style="color:var(--text)">${k.val}</p>
+      </div>`).join('');
+  }
+
+  // Rekap per bulan (hanya jika tidak filter bulan)
+  const bulanBody = document.getElementById('rekap-total-bulan-tbody');
+  if (bulanBody) {
+    const byMonth = {};
+    for (let m = 1; m <= 12; m++) byMonth[m] = { perm: 0, reg: 0, pk: 0, total: 0 };
+    list.forEach(d => {
+      const p = dateParts(d.tglTerima);
+      if (!p.month) return;
+      // jika filter tahun kosong, tetap agregasi per bulan (campur tahun)
+      if (!byMonth[p.month]) byMonth[p.month] = { perm: 0, reg: 0, pk: 0, total: 0 };
+      byMonth[p.month].total++;
+      const st = statusOf(d);
+      if (st === 'Permintaan') byMonth[p.month].perm++;
+      else if (st === 'Terregistrasi') byMonth[p.month].reg++;
+      else if (st === 'Ditunjuk PK') byMonth[p.month].pk++;
+    });
+    bulanBody.innerHTML = [1,2,3,4,5,6,7,8,9,10,11,12].map(m => {
+      const r = byMonth[m];
+      return `<tr>
+        <td class="font-semibold">${BULAN_NAMA[m]}</td>
+        <td>${r.perm}</td><td>${r.reg}</td><td>${r.pk}</td>
+        <td class="font-bold">${r.total}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function countMap(arr, keyFn) {
+    const map = {};
+    arr.forEach(d => {
+      const k = keyFn(d) || '(kosong)';
+      map[k] = (map[k] || 0) + 1;
+    });
+    return Object.entries(map).sort((a,b) => b[1] - a[1]);
+  }
+  function fillPctTable(elId, entries, total) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.innerHTML = entries.length
+      ? entries.map(([k, v]) => `<tr>
+          <td class="font-semibold">${esc(k)}</td>
+          <td>${v}</td>
+          <td>${total ? ((v / total) * 100).toFixed(1) : 0}%</td>
+        </tr>`).join('')
+      : '<tr><td colspan="3" class="text-center text-slate-400 py-6">Tidak ada data</td></tr>';
+  }
+
+  fillPctTable('rekap-total-jenis-tbody', countMap(list, d => d.jenisLitmas), nTotal);
+  fillPctTable('rekap-total-upt-tbody', countMap(list, d => d.upt), nTotal);
+  fillPctTable('rekap-total-integrasi-tbody', countMap(list.filter(d => d.jenisIntegrasi), d => d.jenisIntegrasi), list.filter(d => d.jenisIntegrasi).length || nTotal);
+  fillPctTable('rekap-total-pk-tbody', countMap(list.filter(d => d.pk), d => d.pk), list.filter(d => d.pk).length || 1);
+}
+
 function renderAll(){
   renderDashboard();
   renderPermintaan();
   renderRegistrasi();
   renderPembagian();
   renderStatistik();
+  renderRekapPkBulan();
+  renderRekapTotal();
   renderPk();
   renderUpt();
   renderUsers();

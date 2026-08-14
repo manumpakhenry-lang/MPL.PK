@@ -403,34 +403,46 @@ tbody tr:last-child td { border-bottom: none; }
 
 /* ---------- Running ticker ---------- */
 .rt-ticker {
-  background: var(--navy);
+  background: linear-gradient(90deg, #071a2e 0%, #0a2540 40%, #0d3b66 100%);
   color: #e2e8f0;
   font-size: 12px;
-  padding: 6px 0;
+  padding: 0;
+  height: 40px;
   overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  gap: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  box-shadow: inset 0 -1px 0 rgba(26, 115, 232, 0.15);
 }
 
 .rt-live {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding-left: 16px;
-  font-weight: 700;
+  gap: 8px;
+  padding: 0 16px;
+  height: 100%;
+  font-weight: 800;
   font-size: 10px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   color: #34d399;
   flex-shrink: 0;
+  background: rgba(52, 211, 153, 0.08);
+  border-right: 1px solid rgba(255,255,255,0.08);
 }
 
 .rt-live-dot {
-  width: 6px; height: 6px;
+  width: 7px; height: 7px;
   border-radius: 50%;
   background: #34d399;
-  animation: pulse 1.5s infinite;
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.5);
+  animation: livePulse 1.6s ease-out infinite;
+}
+
+@keyframes livePulse {
+  0% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.55); opacity: 1; }
+  70% { box-shadow: 0 0 0 8px rgba(52, 211, 153, 0); opacity: 0.85; }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); opacity: 1; }
 }
 
 @keyframes pulse {
@@ -438,19 +450,132 @@ tbody tr:last-child td { border-bottom: none; }
   50% { opacity: 0.4; }
 }
 
-.rt-viewport { overflow: hidden; flex: 1; }
-.rt-track {
-  display: inline-block;
-  white-space: nowrap;
-  animation: marquee 40s linear infinite;
+.rt-viewport {
+  overflow: hidden;
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent);
 }
+
+.rt-track {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  animation: marquee 45s linear infinite;
+  will-change: transform;
+}
+
+.rt-track:hover { animation-play-state: paused; }
 
 @keyframes marquee {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
 }
 
+.rt-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 14px;
+  margin: 0 4px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  line-height: 1;
+}
+
+.rt-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.rt-val {
+  font-size: 13px;
+  font-weight: 800;
+  color: #f8fafc;
+  font-variant-numeric: tabular-nums;
+}
+
+.rt-sep {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.35);
+  margin: 0 6px;
+  vertical-align: middle;
+}
+
+.rt-blue .rt-val { color: #93c5fd; }
+.rt-amber .rt-val { color: #fcd34d; }
+.rt-violet .rt-val { color: #c4b5fd; }
+.rt-green .rt-val { color: #6ee7b7; }
+.rt-rose .rt-val { color: #fda4af; }
+.rt-cyan .rt-val { color: #67e8f9; }
+.rt-slate .rt-val { color: #e2e8f0; }
+
+.rt-blue { border-color: rgba(147, 197, 253, 0.2); background: rgba(26, 115, 232, 0.12); }
+.rt-amber { border-color: rgba(252, 211, 77, 0.2); background: rgba(217, 119, 6, 0.12); }
+.rt-violet { border-color: rgba(196, 181, 253, 0.2); background: rgba(124, 58, 237, 0.12); }
+.rt-green { border-color: rgba(110, 231, 183, 0.2); background: rgba(5, 150, 105, 0.12); }
+.rt-rose { border-color: rgba(253, 164, 175, 0.2); background: rgba(225, 29, 72, 0.12); }
+.rt-cyan { border-color: rgba(103, 232, 249, 0.2); background: rgba(8, 145, 178, 0.12); }
+.rt-slate { border-color: rgba(226, 232, 240, 0.15); background: rgba(148, 163, 184, 0.1); }
+
 .rt-scan { display: none; }
+
+/* ---------- PK jabatan chips (statistik & rekap) ---------- */
+.pk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  max-width: 100%;
+}
+
+.pk-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pk-rank {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 7px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.pk-madya .pk-dot { background: #7c3aed; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15); }
+.pk-madya .pk-rank { background: #ede9fe; color: #6d28d9; }
+
+.pk-muda .pk-dot { background: #1a73e8; box-shadow: 0 0 0 3px rgba(26, 115, 232, 0.15); }
+.pk-muda .pk-rank { background: #dbeafe; color: #1d4ed8; }
+
+.pk-pertama .pk-dot { background: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15); }
+.pk-pertama .pk-rank { background: #ccfbf1; color: #0f766e; }
+
+.pk-apk .pk-dot { background: #d97706; box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15); }
+.pk-apk .pk-rank { background: #fef3c7; color: #b45309; }
+
+.pk-lain .pk-dot { background: #64748b; box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.12); }
+.pk-lain .pk-rank { background: #f1f5f9; color: #475569; }
+
+html.dark .pk-madya .pk-rank { background: rgba(124, 58, 237, 0.25); color: #c4b5fd; }
+html.dark .pk-muda .pk-rank { background: rgba(26, 115, 232, 0.25); color: #93c5fd; }
+html.dark .pk-pertama .pk-rank { background: rgba(13, 148, 136, 0.25); color: #5eead4; }
+html.dark .pk-apk .pk-rank { background: rgba(217, 119, 6, 0.25); color: #fcd34d; }
+html.dark .pk-lain .pk-rank { background: rgba(100, 116, 139, 0.25); color: #cbd5e1; }
 
 /* ---------- Page ---------- */
 .page { display: none; }

@@ -171,6 +171,34 @@ function badge(status) {
   return `<span class="badge ${map[status] || 'badge-slate'}">${status || '-'}</span>`;
 }
 
+/** Klasifikasi jabatan PK untuk warna analisis */
+function pkRankFromJabatan(jabatan) {
+  const j = String(jabatan || '').toLowerCase();
+  if (j.includes('madya')) return 'madya';
+  if (j.includes('muda')) return 'muda';
+  if (j.includes('pertama')) return 'pertama';
+  if (j.includes('apk') || j.includes('terampil')) return 'apk';
+  return 'lain';
+}
+
+function pkMetaByName(nama) {
+  const p = allPk.find(x => x.nama === nama);
+  const rank = pkRankFromJabatan(p?.jabatan);
+  const map = {
+    madya:   { label: 'PK Madya',   cls: 'pk-chip pk-madya',   color: '#7c3aed' },
+    muda:    { label: 'PK Muda',    cls: 'pk-chip pk-muda',    color: '#1a73e8' },
+    pertama: { label: 'PK Pertama', cls: 'pk-chip pk-pertama', color: '#0d9488' },
+    apk:     { label: 'APK Terampil', cls: 'pk-chip pk-apk',   color: '#d97706' },
+    lain:    { label: p?.jabatan || 'PK', cls: 'pk-chip pk-lain', color: '#64748b' }
+  };
+  return { jabatan: p?.jabatan || '', rank, ...map[rank] };
+}
+
+function pkNameHtml(nama) {
+  const m = pkMetaByName(nama);
+  return `<span class="${m.cls}" title="${esc(m.jabatan || m.label)}"><span class="pk-dot"></span>${esc(nama)}<span class="pk-rank">${esc(m.label)}</span></span>`;
+}
+
 // Status alur data:
 // - Permintaan (baru masuk)
 // - Terregistrasi (punya noRegister)
@@ -1372,7 +1400,7 @@ function renderStatistik() {
     }
   });
 
-  // Beban PK
+  // Beban PK (warna batang sesuai jabatan)
   const beban = bebanPk();
   const bebanSorted = sortEntries(beban);
   const cPk = document.getElementById('chart-stat-pk');
@@ -1380,7 +1408,12 @@ function renderStatistik() {
     type: 'bar',
     data: {
       labels: bebanSorted.map(e => e[0]),
-      datasets: [{ data: bebanSorted.map(e => e[1]), backgroundColor: '#00e5ff', borderRadius: 8, maxBarThickness: 40 }]
+      datasets: [{
+        data: bebanSorted.map(e => e[1]),
+        backgroundColor: bebanSorted.map(e => pkMetaByName(e[0]).color),
+        borderRadius: 8,
+        maxBarThickness: 40
+      }]
     },
     options: {
       plugins: { legend: { display: false } },
@@ -1413,12 +1446,12 @@ function renderStatistik() {
     }).join('') || '<tr><td colspan="4" class="text-center text-slate-400 py-6">Belum ada data</td></tr>';
   }
 
-  // Tabel rekap PK
+  // Tabel rekap PK (warna sesuai jabatan)
   const rekapEl = document.getElementById('stat-rekap-tbody');
   if (rekapEl) {
     rekapEl.innerHTML = Object.keys(beban).length
       ? Object.keys(beban).map(nama =>
-          `<tr><td class="font-semibold">${esc(nama)}</td><td>${beban[nama]}</td><td>${beban[nama]}</td></tr>`
+          `<tr><td>${pkNameHtml(nama)}</td><td>${beban[nama]}</td><td>${beban[nama]}</td></tr>`
         ).join('')
       : '<tr><td colspan="3" class="text-center text-slate-400 py-4">—</td></tr>';
   }
@@ -1668,19 +1701,22 @@ function updateTicker(){
   const nPk = allData.filter(d => d.pk).length;
   const nPkAktif = allPk.filter(p => p.status !== 'Nonaktif').length;
   const nPerm = allData.filter(d => !d.noRegister).length;
+  const nBelum = Math.max(0, nReg - nPk);
   const items = [
-    { label: 'TOTAL', val: nTotal },
-    { label: 'PERMINTAAN', val: nPerm },
-    { label: 'REGISTRASI', val: nReg },
-    { label: 'DITUNJUK PK', val: nPk },
-    { label: 'PK AKTIF', val: nPkAktif },
+    { label: 'Total Klien', val: nTotal, tone: 'blue' },
+    { label: 'Permintaan', val: nPerm, tone: 'amber' },
+    { label: 'Terregistrasi', val: nReg, tone: 'violet' },
+    { label: 'Ditunjuk PK', val: nPk, tone: 'green' },
+    { label: 'Belum Ditunjuk', val: nBelum, tone: 'rose' },
+    { label: 'PK Aktif', val: nPkAktif, tone: 'cyan' },
   ];
-  if (session) items.push({ label: 'OPERATOR', val: session.nama || session.username });
+  if (session) items.push({ label: 'Operator', val: session.nama || session.username, tone: 'slate' });
+  const sep = '<span class="rt-sep" aria-hidden="true"></span>';
   const html = items.map(t =>
-    `<span class="rt-item"><span class="rt-label">${t.label}</span><span class="rt-val">${t.val}</span></span>`
-  ).join('');
+    `<span class="rt-item rt-${t.tone}"><span class="rt-label">${t.label}</span><span class="rt-val">${esc(String(t.val))}</span></span>`
+  ).join(sep);
   // duplicate for seamless loop
-  track.innerHTML = html + html;
+  track.innerHTML = html + sep + html;
 }
 
 // ---------- Rekapitulasi PK per Bulan ----------
@@ -1738,7 +1774,7 @@ function renderRekapPkBulan() {
     ? pks.map(n => {
         const row = matrix[n] || {};
         return `<tr>
-          <td class="font-semibold">${esc(n)}</td>
+          <td>${pkNameHtml(n)}</td>
           ${months.map(m => `<td class="text-center">${row[m] || 0}</td>`).join('')}
           <td class="text-center font-bold">${row.total || 0}</td>
         </tr>`;
@@ -1854,12 +1890,12 @@ function renderRekapTotal() {
     });
     return Object.entries(map).sort((a,b) => b[1] - a[1]);
   }
-  function fillPctTable(elId, entries, total) {
+  function fillPctTable(elId, entries, total, asPk) {
     const el = document.getElementById(elId);
     if (!el) return;
     el.innerHTML = entries.length
       ? entries.map(([k, v]) => `<tr>
-          <td class="font-semibold">${esc(k)}</td>
+          <td>${asPk ? pkNameHtml(k) : `<span class="font-semibold">${esc(k)}</span>`}</td>
           <td>${v}</td>
           <td>${total ? ((v / total) * 100).toFixed(1) : 0}%</td>
         </tr>`).join('')
@@ -1869,7 +1905,7 @@ function renderRekapTotal() {
   fillPctTable('rekap-total-jenis-tbody', countMap(list, d => d.jenisLitmas), nTotal);
   fillPctTable('rekap-total-upt-tbody', countMap(list, d => d.upt), nTotal);
   fillPctTable('rekap-total-integrasi-tbody', countMap(list.filter(d => d.jenisIntegrasi), d => d.jenisIntegrasi), list.filter(d => d.jenisIntegrasi).length || nTotal);
-  fillPctTable('rekap-total-pk-tbody', countMap(list.filter(d => d.pk), d => d.pk), list.filter(d => d.pk).length || 1);
+  fillPctTable('rekap-total-pk-tbody', countMap(list.filter(d => d.pk), d => d.pk), list.filter(d => d.pk).length || 1, true);
 }
 
 function renderAll(){

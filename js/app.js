@@ -13,9 +13,17 @@ const STORAGE = {
   users: 'MPLPK_USERS'
 };
 
+// URL Web App GAS otomatis (tidak perlu diisi manual)
+const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbwZOhZCUGKMrBClbwhKkptfhOd-xiNorX6mXlATC0TiCV6ENv2R11Q17ni8GkzHiZWjuQ/exec';
+
 const PAGE_SIZE = 12;
 let session = JSON.parse(localStorage.getItem(STORAGE.session) || 'null'); // {username, nama, role}
-let gsheetUrl = localStorage.getItem(STORAGE.gas) || '';
+let gsheetUrl = localStorage.getItem(STORAGE.gas) || DEFAULT_GAS_URL;
+// Pastikan URL default selalu aktif (otomatis) agar pengguna lain tidak perlu mengisi manual
+if (!gsheetUrl || !gsheetUrl.includes('/exec')) {
+  gsheetUrl = DEFAULT_GAS_URL;
+  localStorage.setItem(STORAGE.gas, DEFAULT_GAS_URL);
+}
 let allData = JSON.parse(localStorage.getItem(STORAGE.data) || '[]'); // permintaan/klien
 let allPk = JSON.parse(localStorage.getItem(STORAGE.pk) || '[]');
 let allUpt = JSON.parse(localStorage.getItem(STORAGE.upt) || '[]');
@@ -1421,16 +1429,21 @@ function showModal(html) {
 function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
 
 function openSettingsModal(){
+  // Pastikan URL default selalu aktif
+  if (!gsheetUrl) {
+    gsheetUrl = DEFAULT_GAS_URL;
+    localStorage.setItem(STORAGE.gas, DEFAULT_GAS_URL);
+  }
   showModal(`
     <h3 class="text-lg font-extrabold mb-1">Pengaturan</h3>
     <p class="text-xs text-slate-500 mb-4">Hubungkan Google Sheets via Apps Script</p>
     <div class="space-y-3">
       <div>
-        <label class="fl">URL Web App (/exec)</label>
-        <input class="form-input" id="set-gas" value="${esc(gsheetUrl)}" placeholder="https://script.google.com/macros/s/.../exec">
+        <label class="fl">URL Web App (/exec) <span class="text-emerald-500 text-[10px] font-semibold">• Otomatis</span></label>
+        <input class="form-input" id="set-gas" value="${esc(gsheetUrl)}" readonly style="opacity:0.85;cursor:default" title="URL diisi otomatis">
+        <p class="text-[10px] text-slate-400 mt-1">URL sudah diisi otomatis. Tidak perlu diubah manual.</p>
       </div>
       <div class="flex flex-wrap gap-2">
-        <button class="btn btn-primary" onclick="saveSettings()">Simpan URL</button>
         <button class="btn btn-gold" onclick="testConnection()">Uji Koneksi</button>
         <button class="btn btn-ghost" onclick="syncFromSheets(true)">Sinkron</button>
       </div>
@@ -1444,10 +1457,12 @@ function openSettingsModal(){
   `);
 }
 function saveSettings(){
-  gsheetUrl = document.getElementById('set-gas').value.trim();
-  localStorage.setItem(STORAGE.gas, gsheetUrl);
-  toast('URL disimpan','success');
-  document.getElementById('set-result').textContent = gsheetUrl ? 'Tersimpan. Uji koneksi atau sinkron.' : 'Mode lokal.';
+  // URL dikunci otomatis — tetap jaga nilai default
+  gsheetUrl = DEFAULT_GAS_URL;
+  localStorage.setItem(STORAGE.gas, DEFAULT_GAS_URL);
+  toast('URL otomatis aktif','success');
+  const el = document.getElementById('set-result');
+  if (el) el.textContent = 'URL Web App sudah aktif secara otomatis.';
 }
 async function testConnection(){
   const el = document.getElementById('set-result');
